@@ -1,57 +1,40 @@
 install.packages("INLA", repos="https://www.math.ntnu.no/inla/R/stable")
 library("INLA")
-data(Germany)
-#Germany <- read.csv("C:/Users/Mikkel/Desktop/ANU/Inference/Presentation/R/Germany.txt", sep="")
+library("dplyr")
 
-g = system.file("demodata/germany.graph", package="INLA")
-source(system.file("demodata/Bym-map.R", package="INLA"))
-summary(Germany)
+#Loading neighbor matrix
+load("~/GitHub/stat-inference/poscodes.RData")
 
-## just make a duplicated column
-Germany = cbind(Germany,region.struct=Germany$region)
+# Graph matrix
+g = Postcode_neighbours
 
-Germany$sum = sum(Germany$Y)/sum(Germany$x)
-Germany$E_1 = Germany$sum*Germany$x
+summary(immunisation_data)
+
+## Making a dataset consisting of those without NA's
+immunisation = left_join(Postcodes_with_data, immunisation_data, by=c("Postcode"))
+
+# Generating E
+immunisation$Y = as.numeric(levels(immunisation$Number.not.fully.immunised))[immunisation$Number.not.fully.immunised]
+immunisation$X = as.numeric(levels(immunisation$Number.of.registered.children))[immunisation$Number.of.registered.children]
+immunisation$total_not_immunised = sum(immunisation$Y, na.rm = TRUE)
+immunisation$total_population = sum(immunisation$X, na.rm = TRUE)
+immunisation$A = immunisation$total_not_immunised/immunisation$total_population
+immunisation$E = immunisation$A*immunisation$X
+
+# Generating column with postcodes 1 to n corresponding to real postcodes
+POAs_with_data$postcode_n = 1:nrow(POAs_with_data)
+immunisation = left_join(POAs_with_data, immunisation, by=c("POA_CODE"="Postcode"))
+
+#Generating extra column of postcodes 
+immunisation = cbind(immunisation,postcode_struct=immunisation$postcode_n)
 
 # standard BYM model (without covariates)
-formula1 = Y ~ f(region.struct,model="besag",graph=g) +
-  f(region,model="iid")
+formula1 = Y ~ f(postcode_struct,model="besag",graph=g) +
+  f(postcode_n,model="iid")
 
-
-result1  =  inla(formula1,family="poisson",data=Germany,E=E)
+result1  =  inla(formula1,family="poisson",data=immunisation,E=E)
 
 #Printing the results in a dataframe - this can be useful when we need to map the data
-df = ldply(result1$summary.random$region.struct$mean)
-# with linear covariate
-formula2 = Y ~ f(region.struct,model="besag",graph.file=g) +
-  f(region,model="iid") + x
+results = ldply(result1$summary.random)
 
-result2 =  inla(formula2,family="poisson",data=Germany,E=E)
-
-# with smooth covariate
-formula3 = Y ~ f(region.struct,model="besag",graph.file=g) +
-  f(region,model="iid") + f(x, model="rw2")
-
-result3 =  inla(formula3,family="poisson",data=Germany,E=E)
-inla.pause()
-
-dev.new()
-par(mfrow=c(2,2))
-Bym.map(result1$summary.random$region.struct$mean)
-Bym.map(result2$summary.random$region.struct$mean)
-Bym.map(result3$summary.random$region.struct$mean)
-
-
-## Alternative
-
-prior.iid = c(1,0.01)
-prior.besag = c(1,0.001)
-initial.iid = 4
-initial.besag = 3
-
-formula1.bym = Y ~ f(region, model = "bym", graph.file = g,
-                     param = c(prior.iid, prior.besag),
-                     initial = c(initial.iid, initial.besag))
-result1.bym = inla(formula1.bym,family="poisson",data=Germany,E=E)
-
-Bym.map(result1.bym$summary.random$region.struct$mean)
+save.image("~/GitHub/stat-inference/Results_BYM.RData")
