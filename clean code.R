@@ -14,15 +14,15 @@ library("dplyr")
 ####################################### IMPORT DATA ################################################
 
 #Get the immunisation data:
-setwd("~/GitHub/stat-inference")
+setwd("/Users/jamesbailie/Documents/uni/STAT3013/Project/stat-inference")
 immunisation_data <- read.csv("1 year fully immunised.csv")
 
 #Get the postcode area data:
-setwd("~/GitHub/stat-inference/1270055003_poa_2011_aust_shape")
+setwd("/Users/jamesbailie/Documents/uni/STAT3013/Project/stat-inference/Postcode data/1270055003_poa_2011_aust_shape")
 Postcodes_areas <- readOGR(".", "POA_2011_AUST")
 #ignore the warning message: "dropping null geometries: 2514, 2515, 2516"
 
-setwd("~/GitHub/stat-inference")
+setwd("/Users/jamesbailie/Documents/uni/STAT3013/Project/stat-inference")
 
 ################################### FILTER POSTCODES BY NPs ########################################
 ###Remove postcodes that we do not have immunsiation data on
@@ -118,7 +118,7 @@ POAs_with_data[2,1]
 
 #################################### RUNNING THE MODELS ###########################################
 
-# Definr the Graph/neigborhood matrix
+# Define the Graph/neigborhood matrix
 g = Postcode_neighbours
 
 # First Look at the data
@@ -199,28 +199,16 @@ round(rbind(DIC=c(BYM=result1$dic$dic, IID=result2$dic$dic),
 
 #################################### EXPORT MODEL DATA ############################################
 
-#Assumptions:
-#1) Model data results are stored in data.frame 'results'
-#'results' has a column 'mean' - this is what we want to map
-#'results' has a column 'ID' - this is the index (ID) of the postcode
-#That is - postcode_n = 1 means it corresponds to the first row of 
-# Postcodes_with_area_and_immune_data
-#2) POAs_with_data has a column 'postcode_n' that corresponds to the 'ID' column in 'results
-
-#Get postcode area code:
-POAs_with_data["ID"] = POAs_with_data["postcode_n"]
-merged <- merge(results, POAs_with_data,by="ID")
-
-#for some reason results has 2 rows for each postcode
-#Just take the '.id' = postcode_n row: (ask Mikkel tomorrow)
-
-export <- merged[merged['.id'] == "postcode_n",]
-
-#take the columns we care about
-export2 <- cbind(export["POA_CODE"], export["mean"])
+#Generate the table we want to export:
+export <- POAs_with_data[,c("ID", "POA_CODE")]
+export <- merge(export, UHexceedence_iid[, c("ID", "V1")], by="ID")
+export <- merge(export, UHexceedence_BYM[, c("ID", "V1")], by="ID")
+export <- merge(export, iid_results[, c("ID", "Mean")], by="ID")
+export <- merge(export, BYM_results[, c("ID", "Mean")], by="ID")
+names(export) <- c("ID", "POA_CODE", "UHexceedence_iid", "UHexceedence_BYM", "RRF_iid", "RRF_BYM")
 
 #Pad out three digit numbers into 4 digit numbers
-export2["POA_CODE"] <- sprintf("%04d", export2[,"POA_CODE"])
+export["POA_CODE"] <- sprintf("%04d", export[,"POA_CODE"])
 
 #output as .csv file to put into Google Fusion Tables:
-write.csv(export2, "results table.csv")
+write.csv(export, "results table.csv")
