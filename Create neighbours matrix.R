@@ -3,6 +3,7 @@
 #Load required libraries:
 library(rgeos)
 library(maptools)
+#library(maps)
 library(spdep)
 library("rgdal")
 
@@ -12,6 +13,15 @@ Postcodes <- readOGR(".", "POA_2011_AUST")
 
 coords <- coordinates(Postcodes)
 IDs <- row.names(as(Postcodes, "data.frame"))
+Sy1_nb <- poly2nb(Postcodes, queen=FALSE)
+plot(Sy1_nb, coords)
+
+
+plot(Postcodes)
+par(new=TRUE)
+plot(Sy1_nb, coords)
+
+
 Sy4_nb <- tri2nb(coords, row.names = IDs)
 Sy5_nb <- graph2nb(soi.graph(Sy4_nb, coords), row.names = IDs)
 Sy6_nb <- graph2nb(gabrielneigh(coords), row.names = IDs)

@@ -12,6 +12,16 @@ Postcodes <- readOGR(".", "POA_2011_AUST")
 
 coords <- coordinates(Postcodes)
 IDs <- row.names(as(Postcodes, "data.frame"))
+class(coords)
+Sy1_nb <- poly2nb(Postcodes)
+Sy11_nb <- dnearneigh(coords, d1 = 0, d2 = mean_dst, row.names = IDs)
+
+Sy8_nb <- knn2nb(knearneigh(coords, k = 1), row.names = IDs)
+dsts <- unlist(nbdists(Sy8_nb, coords))
+summary(dsts)
+max_1nn <- max(dsts)
+mean_dst <- mean(dsts)
+
 Sy4_nb <- tri2nb(coords, row.names = IDs)
 Sy5_nb <- graph2nb(soi.graph(Sy4_nb, coords), row.names = IDs)
 Sy6_nb <- graph2nb(gabrielneigh(coords), row.names = IDs)
