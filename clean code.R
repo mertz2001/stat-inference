@@ -19,19 +19,24 @@ setwd("~/Documents/uni/STAT3013/Project/stat-inference/Postcode data/1270055003_
 Postcodes_areas <- readOGR(".", "POA_2011_AUST")
 #ignore the warning message: "dropping null geometries: 2514, 2515, 2516"
 
-################################### FILTER POSTCODES BY NAs ########################################
-#Remove postcodes that we do not have immunsiation data on
-#List postcodes that have immunisation data:
-Postcodes_with_data <- subset(immunisation_data, Number.fully.immunised != "NP")["Postcode"]
+setwd("/Users/jamesbailie/Documents/uni/STAT3013/Project/stat-inference")
 
-#List postcodes that also have postal code area data:
+################################### FILTER POSTCODES BY NPs ########################################
+###Remove postcodes that we do not have immunsiation data on
+#List postcodes that have immunisation data:
+Postcodes_with_immune_data <- subset(immunisation_data, Number.fully.immunised != "NP")["Postcode"]
+
+##List postcodes that also have postal code area data:
 POAs <- as(Postcodes_areas, "data.frame")
 POAs <- transform(POAs, POA_CODE = as.numeric(levels(POA_CODE))[POA_CODE])
-POAs_with_data <- subset(POAs, POA_CODE %in% t(Postcodes_with_data["Postcode"]))
+POAs_with_data <- subset(POAs, POA_CODE %in% t(Postcodes_with_immune_data["Postcode"]))
 
 ##Filter postcode area spatial data:
 Postcode_areas_with_data <- Postcodes_areas[as.numeric(levels(Postcodes_areas$POA_CODE))[Postcodes_areas$POA_CODE] 
-                                            %in% t(Postcodes_with_data["Postcode"]),]
+                                            %in% t(Postcodes_with_immune_data["Postcode"]),]
+
+##Fiter immunisation data by NP and whether there is postal code area data:
+Postcodes_with_area_and_immune_data <- subset(immunisation_data, Postcode %in% POAs_with_data[,"POA_CODE"])
 
 ################################# CREATE NEIGHBOURHOOD MATRIX ######################################
 
@@ -74,3 +79,38 @@ Postcode_neighbours[1:10,1:10]
 #e.g.
 POAs_with_data[2,1]
 
+###################################################################################################
+
+#Data is stored in:
+#   - Postcode_neighbours matrix - this is the matrix of neighbours - postcodes i and j are neighbours
+#      iff entry [i,j] is 1
+#   - Immunisation data - filtered by whether there is immunisation data & postal code area data - 
+#      is stored in Postcodes_with_area_and_immune_data
+
+#################################### EXPORT MODEL DATA ############################################
+
+#Assumptions:
+#1) Model data results are stored in data.frame 'results'
+#'results' has a column 'mean' - this is what we want to map
+#'results' has a column 'ID' - this is the index (ID) of the postcode
+#That is - postcode_n = 1 means it corresponds to the first row of 
+# Postcodes_with_area_and_immune_data
+#2) POAs_with_data has a column 'postcode_n' that corresponds to the 'ID' column in 'results
+
+#Get postcode area code:
+POAs_with_data["ID"] = POAs_with_data["postcode_n"]
+merged <- merge(results, POAs_with_data,by="ID")
+
+#for some reason results has 2 rows for each postcode
+#Just take the '.id' = postcode_n row: (ask Mikkel tomorrow)
+
+export <- merged[merged['.id'] == "postcode_n",]
+
+#take the columns we care about
+export2 <- cbind(export["POA_CODE"], export["mean"])
+
+#Pad out three digit numbers into 4 digit numbers
+export2["POA_CODE"] <- sprintf("%04d", export2[,"POA_CODE"])
+
+#output as .csv file to put into Google Fusion Tables:
+write.csv(export2, "results table.csv")
