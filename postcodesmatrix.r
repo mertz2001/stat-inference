@@ -108,6 +108,6 @@ Postcode_neighbours[1:10,1:10]
 #How to get Postcode back from index 1:n:
 #If index is i then postcode is POAs_with_data[i,1]
 #e.g.
-POAs_with_data[2,1]
+POAs_with_data[500,1]
 
 save.image("~/GitHub/stat-inference/poscodes.RData")
