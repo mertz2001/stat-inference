@@ -38,6 +38,32 @@ Postcode_areas_with_data <- Postcodes_areas[as.numeric(levels(Postcodes_areas$PO
 ##Fiter immunisation data by NP and whether there is postal code area data:
 Postcodes_with_area_and_immune_data <- subset(immunisation_data, Postcode %in% POAs_with_data[,"POA_CODE"])
 
+####################################### DATA EXPLORATION ###########################################
+
+not <- Postcodes_with_area_and_immune_data[,"Number.not.fully.immunised"]
+postcode_population <- Postcodes_with_area_and_immune_data[,"Number.of.registered.children"]
+
+sum(not == "NP")
+sum(postcode_population == "NP")
+
+total_not_immunised <- sum(as.numeric(levels(not))[not])
+population <- sum(as.numeric(levels(postcode_population))[postcode_population])
+
+nation_wide_rate = total_not_immunised/population
+nation_wide_rate
+
+##Mean, median 1st and 3rd quartiles of postcode rates:
+Postcodes_with_area_and_immune_data["rate_not_immunised"] = as.numeric(levels(not))[not]/as.numeric(levels(postcode_population))[postcode_population]
+
+head(Postcodes_with_area_and_immune_data["rate_not_immunised"])
+sum(is.na(Postcodes_with_area_and_immune_data["rate_not_immunised"]))
+sum(Postcodes_with_area_and_immune_data["rate_not_immunised"] <= 0 | Postcodes_with_area_and_immune_data["rate_not_immunised"] >= 1)
+
+summary(Postcodes_with_area_and_immune_data["rate_not_immunised"])
+
+##Histogram of rates
+hist(x=Postcodes_with_area_and_immune_data[,"rate_not_immunised"], xlim =c(0,0.5), xlab="Fraction of 1 yr. old children not immunised", breaks=75, main="", ylab="Number of postcodes")
+
 ################################# CREATE NEIGHBOURHOOD MATRIX ######################################
 
 #Generate IDs and coordinates 
